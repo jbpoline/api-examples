@@ -30,17 +30,25 @@ import string
 # set of structures using the StructureSets table.  Only the `TOP_N` most 
 # correlated connections will be kept, approximately.
 
+# python -m SimpleHTTPServer to use the application locally (web browser too
+# restrictif on security otherwise)
+
 API_PATH = "http://api.brain-map.org/api/v2/data"
 #API_PATH = "http://ibs-davidf-ux1:3000/api/v2/data"
 GRAPH_ID = 1 # ontology id
 MOUSE_PRODUCT_ID = 1 # aba
 HUMAN_BRAIN_MA_PRODUCT_ID = 2 # can be found in http://api.brain-map.org/api/v2/data/Product/query.xml
 
-
 # to find all the products: http://api.brain-map.org/api/v2/data/Product/query.xml
 
 # query for all the human probes:
-# http://api.brain-map.org/api/v2/data/query.xml?criteria=service::human_microarray_expression[probes$eq1053219]
+# http://api.brain-map.org/api/v2/data/query.xml?criteria=service::human_microarray_expression[probes$eq1053219][donor$eq10021]
+
+# query to get a donnor id :
+# http://api.brain-map.org/api/v2/data/query.xml?criteria=model::Donor,rma::criteria,[name$eqH0351.2002],
+# H0351.2002 was found by searching for donnor
+
+# http://api.brain-map.org/examples/rma_builder/rma_builder.html
 
 # get all probes - # http://api.brain-map.org/api/v2/data/Probe/query.xml?criteria=[probe_type$eq'DNA'],products[abbreviation$eq'HumanMA']
 
@@ -48,6 +56,7 @@ HUMAN_BRAIN_MA_PRODUCT_ID = 2 # can be found in http://api.brain-map.org/api/v2/
 
 # http://api.brain-map.org/api/v2/data/Probe/query.xml?criteria=[probe_type$eq'DNA'],products[abbreviation$eq'HumanMA'],rma::options[start_rows$eq0],rma::options[num_rows$eq2000]
 
+#
 
 PLANE_ID = 1 # coronal
 TOP_N = 2000
@@ -61,25 +70,48 @@ PROBE_ID_QUERY_URL_specif_rows = ("%s/Probe/query.json?criteria=[probe_type$eq'D
 PROBE_ID_QUERY_URL = ("%s/Probe/query.json?criteria=[probe_type$eq'DNA']" +\
                         ",products[abbreviation$eq'HumanMA']") % (API_PATH)
 
-
-DATA_SET_QUERY_URL = ("%s/SectionDataSet/query.json" +\
-                          "?criteria=[failed$eq'false'][expression$eq'true']" +\
-                          ",products[id$eq%d]" +\
-                          ",plane_of_section[id$eq%d]") % (API_PATH, MOUSE_PRODUCT_ID, PLANE_ID)
+#-- DATA_SET_QUERY_URL = ("%s/SectionDataSet/query.json" +\
+#--                           "?criteria=[failed$eq'false'][expression$eq'true']" +\
+#--                           ",products[id$eq%d]" +\
+#--                           ",plane_of_section[id$eq%d]") % (API_PATH, MOUSE_PRODUCT_ID, PLANE_ID)
 
 
 # UNIONIZE_FMT = "%s/StructureUnionize/query.json" +\
 #     "?criteria=[section_data_set_id$eq%d]" +\
 #     "&include=section_data_set(products[id$eq%d])" % (MOUSE_PRODUCT_ID)
 
+
+
+def Get_HBA_StructureGraph():
+    graph_url = "http://api.brain-map.org/api/v2/data/query.json?" +\
+        "criteria=model::StructureGraph,rma::criteria,ontology[id$eq7]"
+    source = urllib.urlopen(graph_url).read()
+    response = json.loads(source)
+    return(response['msg'][0]['id'])
+
+
+# get the human brain ontology
+def Get_HBA_Ontology(ontology_key):
+    """ example : id =  Get_HBA_Ontology('id')
+    """
+    url = "http://api.brain-map.org/api/v2/data/query.json?" +\
+            "criteria=model::Ontology,rma::criteria,[abbreviation$ilhuman]"
+    source = urllib.urlopen(pagedUrl).read()
+    response = json.loads(source)
+    return(response['msg'][0][ontology_key])
+
+
 STRUCTURES_URL = ("%s/Structure/query.json?" +\
-                      "criteria=[graph_id$eq%d]") % (API_PATH, GRAPH_ID)
+                      "criteria=[graph_id$eq%d]") % (API_PATH,
+                                                     Get_HBA_StructureGraph())
 
 # Make a query to the API via a URL.
-def QueryAPI(url):
+def QueryAPI(url,total_rows=-1):
     start_row = 0
-    num_rows = 2000
-    total_rows = -1
+    if total_rows > 0 and total_rows < 2000:
+        num_rows = total_rows
+    else:
+        num_rows = 2000
     rows = []
     done = False
 
@@ -90,7 +122,6 @@ def QueryAPI(url):
 
         print pagedUrl
         source = urllib.urlopen(pagedUrl).read()
-
         response = json.loads(source)
         rows += response['msg']
 
@@ -104,16 +135,19 @@ def QueryAPI(url):
 
     return rows
 
+
+
+
 # Download the first `n` data sets.  For negative `n` , download them all.
-def DownloadDataSets(n):
-    dataSets = QueryAPI(DATA_SET_QUERY_URL)
-
-    if n <= 0:
-        return dataSets
-    else:
-        n = min(len(dataSets), n)
-
-    return dataSets[:n]
+#-- def DownloadDataSets(n):
+#--     dataSets = QueryAPI(DATA_SET_QUERY_URL)
+#--
+#--     if n <= 0:
+#--         return dataSets
+#--     else:
+#--         n = min(len(dataSets), n)
+#--
+#--     return dataSets[:n]
 
 # Download the mouse brain structures in a structure graph.
 def DownloadStructures():
@@ -141,8 +175,8 @@ def DownloadStructures():
 # Download expression data from the StructureUnionize table.  This table is
 # accessed one probe/data set at a time, retrieving all of the expression levels
 # for structures showing expression for that probe.
-def DownloadExpression(dataSets):
-    return [QueryAPI(UNIONIZE_FMT % (API_PATH,d['id'])) for d in dataSets]
+#-  def DownloadExpression(dataSets):
+#-      return [QueryAPI(UNIONIZE_FMT % (API_PATH,d['id'])) for d in dataSets]
 
 # Download all of the probes, structures, and expression data for the adult mouse
 # brain and transform it into useful data structures. Then compute
@@ -152,39 +186,39 @@ def DownloadAndCorrelateData(n):
     structureIds, structHash = DownloadStructures()
     unionizes = DownloadExpression(dataSets)
 
-    # Each structure will have an expression vector.  This vector will be as long
-    # as the number of requested structures.
-    nstructs = len(structureIds)
-    ndata = len(dataSets)
-
-    sidHash = dict([(id,i) for (i,id) in enumerate(structureIds)])
-    didHash = dict([(d['id'],i) for (i,d) in enumerate(dataSets)])
-
-    expression = numpy.empty([nstructs,ndata])
-    expression.fill(numpy.nan)
-
-    # For each data set's set of unionizes, then for each individual structure,
-    # fill in the structure's expression vector.
-    for i,us in enumerate(unionizes):
-        # for each unionize
-        for j,u in enumerate(us):
-            sid = u['structure_id']
-            did = u['section_data_set_id']
-
-            struct = structHash[sid]
-            struct['volume'] = u['sum_pixels']
-
-            if sidHash.has_key(sid) and didHash.has_key(did):
-                expression[sidHash[sid]][didHash[did]] = u['expression_energy']
-
-    # numpy has a masked_array data structure that performs computations while
-    # filtering out values you don't care about.  In this case, we don't want 
-    # the correlation computation to use NaN's, which indicate that no 
-    # expression was measured for a structure.
-    mdat = numpy.ma.masked_array(expression,numpy.isnan(expression))
-    corr = numpy.ma.corrcoef(mdat)
-
-    return corr.data, structureIds, structHash
+#--        # Each structure will have an expression vector.  This vector will be as long
+#--        # as the number of requested structures.
+#--        nstructs = len(structureIds)
+#--        ndata = len(dataSets)
+#--
+#--        sidHash = dict([(id,i) for (i,id) in enumerate(structureIds)])
+#--        didHash = dict([(d['id'],i) for (i,d) in enumerate(dataSets)])
+#--
+#--        expression = numpy.empty([nstructs,ndata])
+#--        expression.fill(numpy.nan)
+#--
+#--        # For each data set's set of unionizes, then for each individual structure,
+#--        # fill in the structure's expression vector.
+#--        for i,us in enumerate(unionizes):
+#--            # for each unionize
+#--            for j,u in enumerate(us):
+#--                sid = u['structure_id']
+#--                did = u['section_data_set_id']
+#--
+#--                struct = structHash[sid]
+#--                struct['volume'] = u['sum_pixels']
+#--
+#--                if sidHash.has_key(sid) and didHash.has_key(did):
+#--                    expression[sidHash[sid]][didHash[did]] = u['expression_energy']
+#--
+#--        # numpy has a masked_array data structure that performs computations while
+#--        # filtering out values you don't care about.  In this case, we don't want
+#--        # the correlation computation to use NaN's, which indicate that no
+#--        # expression was measured for a structure.
+#--        mdat = numpy.ma.masked_array(expression,numpy.isnan(expression))
+#--        corr = numpy.ma.corrcoef(mdat)
+#--
+#--        return corr.data, structureIds, structHash
 
 # Given a structures-by-probes correlation matrix and an array of structures,
 # figure out which structures are the most correlated to each other.  Return
@@ -238,7 +272,7 @@ if ext == ".json":
     f = open(connfile,"w")
     f.write(json.dumps(conns))
     f.close()
-    
+
     f = open(structfile,"w")
     f.write(json.dumps(structHash.values()))
     f.close()
