@@ -60,9 +60,7 @@ HUMAN_BRAIN_ATLAS_ONT_ID = 7 # http://api.brain-map.org/api/v2/data/query.xml?cr
 
 #
 
-PLANE_ID = 1 # coronal
 TOP_N = 2000
-
 
 PROBE_ID_QUERY_URL_specif_rows = ("%s/Probe/query.json?criteria=[probe_type$eq'DNA']" +\
                          ",products[abbreviation$eq'HumanMA']" +\
@@ -75,17 +73,6 @@ PROBE_ID_QUERY_URL = ("%s/Probe/query.json?criteria=[probe_type$eq'DNA']" +\
 
 URL_EXPRESS = ("http://api.brain-map.org/api/v2/data/query.json?" +\
                         "criteria=service::human_microarray_expression[donor$eq10021]")
-
-#-- DATA_SET_QUERY_URL = ("%s/SectionDataSet/query.json" +\
-#--                           "?criteria=[failed$eq'false'][expression$eq'true']" +\
-#--                           ",products[id$eq%d]" +\
-#--                           ",plane_of_section[id$eq%d]") % (API_PATH, MOUSE_PRODUCT_ID, PLANE_ID)
-
-
-# UNIONIZE_FMT = "%s/StructureUnionize/query.json" +\
-#     "?criteria=[section_data_set_id$eq%d]" +\
-#     "&include=section_data_set(products[id$eq%d])" % (MOUSE_PRODUCT_ID)
-
 
 def Get_HBA_StructureGraph(ontolog_id):
     """ example : id_of_graph =  Get_HBA_Ontology(7) (if 7 is the ontology id)
@@ -109,9 +96,9 @@ def Get_HBA_Ontology(ontology_key):
     return(response['msg'][0][ontology_key])
 
 
+structure_id = Get_HBA_StructureGraph(Get_HBA_Ontology('id'))
 STRUCTURES_URL = ("%s/Structure/query.json?" +\
-                      "criteria=[graph_id$eq%d]") % (API_PATH,
-                                                     Get_HBA_StructureGraph())
+                      "criteria=[graph_id$eq%d]") % (API_PATH,structure_id)
 
 def OneQueryAPI(url):
     source = source = urllib.urlopen(url).read()
