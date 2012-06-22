@@ -53,7 +53,7 @@ var highlightOpacityRange = [.4,0.7];
 var tensionRange = [0,.99];
 var transitionTime = 1000;
 var fastTransitionTime = 200;
-var rootStructureId = 10;
+var rootStructureId = 4005;
 // var rootStructureId = 8;
 
 // Scales for interpolating a range of colors/angles/values/etc
