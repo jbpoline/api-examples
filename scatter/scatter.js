@@ -32,7 +32,7 @@ if (!Modernizr.svg){
 var margin = 50;
 var r = 3;
 var numTicks = 10;
-var apiPath = "/api/v2/data/query.json";
+var apiPath = "http://api.brain-map.org/api/v2/data/query.json";
 
 // The dimensions of the plot are the dimensions of the HTML div element, minus
 // the margin size.
